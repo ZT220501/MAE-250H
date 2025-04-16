@@ -36,28 +36,102 @@ def conjugate_gradient(A, b, x0, tol=1e-6, max_iter=100):
 
 
 
+'''
+Generate the staggered grid
+TODO: Test this part
+'''
+class staggered_grid:
 
-def staggered_grid(Lx, Ly, Nx, Ny):
-    pass
 
+    def __init__(self, Lx, Ly, Nx, Ny):
+        '''
+        Initialize the staggered grid.
+        In this implementation, it follows the convention of Python indexing, 
+        so that the horizontally it mimics that x is increasing from left to right,
+        and the vertically it mimics that y is increasing from top to bottom.
+
+        To vary the x value, change the second argument in the mesh_grid.
+        To vary the y value, change the first argument in the mesh_grid.
+        '''
+        self.Lx = Lx
+        self.Ly = Ly
+        self.Nx = Nx
+        self.Ny = Ny
+
+        # Define the grid points
+        self.x_grid = np.linspace(0, Lx, Nx+1)
+        self.y_grid = np.linspace(0, Ly, Ny+1)
+        self.mesh_grid = np.meshgrid(self.x_grid, self.y_grid)
+
+        # Define the pressures at the cell centers
+        self.pressure_grid = np.zeros((Nx, Ny))
+
+        # Define the velocities at the faces
+        self.u = np.zeros((Nx-1, Ny))
+        self.v = np.zeros((Nx, Ny-1))
+
+        # Define the vorticity at the cell centers
+        self.vorticity_grid = np.zeros((Nx-1, Ny-1))
+
+
+        # Get the grid points
+        def get_grid(self):
+            return self.x_grid, self.y_grid, self.mesh_grid
+        # Get the pressures at the cell centers
+        def get_pressure(self):
+            return self.pressure_grid
+        # Get the velocities at the faces
+        def get_velocity(self):
+            return self.u, self.v
+        # Get the vorticity at the cell vertices
+        def get_vorticity(self):
+            return self.vorticity_grid
+        
+
+
+
+     
 
 
 
 '''
 Discrete divergence operator
-TODO: Finish this part
+TODO: Test this part
 '''
-def divergence(u, v, dx, dy):
-    pass
+def divergence(u, v, mesh_grid):
+    # Central difference is used for the divergence operator
+    # Since we're using the staggered grid, the divergence is at the cell centers
+    x_grid, y_grid = mesh_grid
+    dx = x_grid[0, 1] - x_grid[0, 0]
+    dy = y_grid[1, 0] - y_grid[0, 0]
+
+    Nx, Ny = x_grid.shape
+    # The divergence are calculated at the cell centers
+    div = np.zeros((Nx-1, Ny-1))
+    div[1:-1, 1:-1] = (u[:, 1:] - u[:, :-1]) / dx + (v[1:, :] - v[:-1, :]) / dy
+    return div
 
 
 
 '''
 Discrete gradient operator
-TODO: Finish this part
+TODO: Finish this part: How to handle the boundary condition?
 '''
-def gradient(u, v, dx, dy):
-    pass
+def gradient(p, mesh_grid):
+    '''
+    Calculate the gradient of a scalar field p at the cell faces.
+
+    p: np.ndarray(Nx, Ny)
+    mesh_grid: np.meshgrid with x and y coordinates have shapes (Nx+1, Ny+1)
+    '''
+    x_grid, y_grid = mesh_grid
+    dx = x_grid[0, 1] - x_grid[0, 0]
+    dy = y_grid[1, 0] - y_grid[0, 0]
+
+    Nx, Ny = x_grid.shape
+    grad = np.zeros((Nx, Ny))
+    grad[1:-1, 1:-1] = (u[1:-1, 1:] - u[1:-1, :-1]) / dx + (v[1:, 1:-1] - v[:-1, 1:-1]) / dy
+    return grad
 
 
 
