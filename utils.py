@@ -1,6 +1,6 @@
 import numpy as np
 from numpy import float64
-
+import matplotlib.pyplot as plt
 
 
 
@@ -43,7 +43,7 @@ TODO: Test this part
 class staggered_grid:
 
 
-    def __init__(self, Lx, Ly, Nx, Ny):
+    def __init__(self, Lx, Ly, Nx, Ny, initial_condition):
         '''
         Initialize the staggered grid.
         In this implementation, it follows the convention of Python indexing, 
@@ -52,13 +52,24 @@ class staggered_grid:
 
         To vary the x value, change the second argument in the mesh_grid.
         To vary the y value, change the first argument in the mesh_grid.
+
+        We assume the grid is uniform in this implementation
         '''
         self.Lx = Lx
         self.Ly = Ly
         self.Nx = Nx
         self.Ny = Ny
+        self.dx = int(Lx / Nx)
+        self.dy = int(Ly / Ny)
 
-        # Define the grid points
+        self.initial_condition = initial_condition
+
+
+
+        '''
+        Staggered grid initialization
+        '''
+        # Define the spatial grid points
         self.x_grid = np.linspace(0, Lx, Nx+1)
         self.y_grid = np.linspace(0, Ly, Ny+1)
         self.mesh_grid = np.meshgrid(self.x_grid, self.y_grid)
@@ -88,6 +99,15 @@ class staggered_grid:
             return self.vorticity_grid
         
 
+        def visualize(self):
+            '''
+            Visualize the staggered grid
+            '''
+            plt.figure(figsize=(10, 10))
+            plt.pcolormesh(self.x_grid, self.y_grid, self.pressure_grid)
+            plt.colorbar()
+            plt.show()
+
 
 
      
@@ -115,11 +135,12 @@ def divergence(u, v, mesh_grid):
 
 '''
 Discrete gradient operator
-TODO: Finish this part: How to handle the boundary condition?
+TODO: Test this part
 '''
 def gradient(p, mesh_grid):
     '''
     Calculate the gradient of a scalar field p at the cell faces.
+    The x-component of the gradient is at the x-faces, and the y-component of the gradient is at the y-faces.
 
     p: np.ndarray(Nx, Ny)
     mesh_grid: np.meshgrid with x and y coordinates have shapes (Nx+1, Ny+1)
@@ -129,9 +150,12 @@ def gradient(p, mesh_grid):
     dy = y_grid[1, 0] - y_grid[0, 0]
 
     Nx, Ny = x_grid.shape
-    grad = np.zeros((Nx, Ny))
-    grad[1:-1, 1:-1] = (u[1:-1, 1:] - u[1:-1, :-1]) / dx + (v[1:, 1:-1] - v[:-1, 1:-1]) / dy
-    return grad
+    grad_x = np.zeros((Nx-1, Ny))
+    grad_y = np.zeros((Nx, Ny-1))
+
+    grad_x[:, 1:-1] = (p[:, 1:] - p[:, :-1]) / dx
+    grad_y[1:-1, :] = (p[1:, :] - p[:-1, :]) / dy
+    return grad_x, grad_y
 
 
 
@@ -202,7 +226,7 @@ def laplacian(u, mesh_grid, bc="Periodic"):
 
 
 
-def upwind_2D(u_previous, mesh_grid, V0, vector_field):
+def nonlinear_advection(u_previous, mesh_grid, V0, vector_field):
     '''
     Solution for the advection equation in 2D, with the vector field \vec{v}=(V_0x, V_0y) or \vec{v}=(0, -V_0x)
 
