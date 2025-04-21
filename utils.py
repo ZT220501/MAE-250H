@@ -63,8 +63,8 @@ class staggered_grid:
         self.Ly = Ly
         self.Nx = Nx
         self.Ny = Ny
-        self.dx = int(Lx / Nx)
-        self.dy = int(Ly / Ny)
+        self.dx = Lx / Nx
+        self.dy = Ly / Ny
 
         self.initial_condition = initial_condition
 
@@ -73,44 +73,49 @@ class staggered_grid:
         '''
         Staggered grid initialization
         '''
-        # Define the spatial grid points
-        self.x_grid = np.linspace(0, Lx, Nx+1)
-        self.y_grid = np.linspace(0, Ly, Ny+1)
-        self.mesh_grid = np.meshgrid(self.x_grid, self.y_grid)
+        # Define the mesh grid for the spatial points
+        self.spatial_mesh_grid = np.meshgrid(np.linspace(0, Lx, Nx+1), np.linspace(0, Ly, Ny+1))
+        # Define the mesh grid for the center points
+        self.pressure_mesh_grid = np.meshgrid(np.linspace(self.dx/2, Lx-self.dx/2, Nx), np.linspace(self.dy/2, Ly-self.dy/2, Ny))
+        # Define the mesh grid for the velocity points
+        self.u_mesh_grid = np.meshgrid(np.linspace(0, Lx, Nx+1), np.linspace(self.dy/2, Ly-self.dy/2, Ny))
+        self.v_mesh_grid = np.meshgrid(np.linspace(self.dx/2, Lx-self.dx/2, Nx), np.linspace(0, Ly, Ny+1))
+        # Define the mesh grid for the vorticity points
+        self.vorticity_mesh_grid = np.meshgrid(np.linspace(self.dx, Lx-self.dx, Nx-1), np.linspace(self.dy, Ly-self.dy, Ny-1))
 
         # Define the pressures at the cell centers
-        self.pressure_grid = np.zeros((Nx, Ny))
+        self.pressure = np.zeros((Nx, Ny))
 
         # Define the velocities at the faces
         self.u = np.zeros((Nx-1, Ny))
         self.v = np.zeros((Nx, Ny-1))
 
         # Define the vorticity at the cell centers
-        self.vorticity_grid = np.zeros((Nx-1, Ny-1))
+        self.vorticity = np.zeros((Nx-1, Ny-1))
 
 
-        # Get the grid points
-        def get_grid(self):
-            return self.x_grid, self.y_grid, self.mesh_grid
-        # Get the pressures at the cell centers
-        def get_pressure(self):
-            return self.pressure_grid
-        # Get the velocities at the faces
-        def get_velocity(self):
-            return self.u, self.v
-        # Get the vorticity at the cell vertices
-        def get_vorticity(self):
-            return self.vorticity_grid
-        
+    # Get the grid points
+    def get_grid(self):
+        return self.spatial_mesh_grid, self.pressure_mesh_grid, self.u_mesh_grid, self.v_mesh_grid, self.vorticity_mesh_grid
+    # Get the pressures at the cell centers
+    def get_pressure(self):
+        return self.pressure
+    # Get the velocities at the faces
+    def get_velocity(self):
+        return self.u, self.v
+    # Get the vorticity at the cell vertices
+    def get_vorticity(self):
+        return self.vorticity
+    
 
-        def visualize(self):
-            '''
-            Visualize the staggered grid
-            '''
-            plt.figure(figsize=(10, 10))
-            plt.pcolormesh(self.x_grid, self.y_grid, self.pressure_grid)
-            plt.colorbar()
-            plt.show()
+    def visualize(self):
+        '''
+        Visualize the staggered grid
+        '''
+        plt.figure(figsize=(10, 10))
+        plt.pcolormesh(self.x_grid, self.y_grid, self.pressure_grid)
+        plt.colorbar()
+        plt.show()
 
 
 
