@@ -47,7 +47,7 @@ TODO: Test this part
 class staggered_grid:
 
 
-    def __init__(self, Lx, Ly, Nx, Ny, initial_condition):
+    def __init__(self, Lx, Ly, Nx, Ny, initial_condition_velocity, initial_condition_pressure):
         '''
         Initialize the staggered grid.
         In this implementation, it follows the convention of Python indexing, 
@@ -66,8 +66,6 @@ class staggered_grid:
         self.dx = Lx / Nx
         self.dy = Ly / Ny
 
-        self.initial_condition = initial_condition
-
 
 
         '''
@@ -83,15 +81,29 @@ class staggered_grid:
         # Define the mesh grid for the vorticity points
         self.vorticity_mesh_grid = np.meshgrid(np.linspace(self.dx, Lx-self.dx, Nx-1), np.linspace(self.dy, Ly-self.dy, Ny-1))
 
-        # Define the pressures at the cell centers
-        self.pressure = np.zeros((Nx, Ny))
+        # Define the pressure at the cell centers using the initial condition
+        self.pressure = initial_condition_pressure(self.pressure_mesh_grid)
 
-        # Define the velocities at the faces
-        self.u = np.zeros((Nx-1, Ny))
-        self.v = np.zeros((Nx, Ny-1))
+        # Define the velocity field at the faces using the initial condition
+        self.u, self.v = initial_condition_velocity(self.u_mesh_grid, self.v_mesh_grid)
 
-        # Define the vorticity at the cell centers
-        self.vorticity = np.zeros((Nx-1, Ny-1))
+        # Compute the vorticity at the cell centers based on the velocity field
+        self.vorticity = vorticity(self.u, self.v, self.vorticity_mesh_grid)
+
+
+
+    def compute_divergence(self, u, v, spatial_mesh_grid):
+        '''
+        Compute the divergence of the velocity field
+        '''
+        return divergence(u, v, spatial_mesh_grid)
+    
+
+    def compute_vorticity(self, u, v, vorticity_mesh_grid):
+        '''
+        Compute the vorticity of the velocity field
+        '''
+        return vorticity(u, v, vorticity_mesh_grid)
 
 
     # Get the grid points
@@ -119,6 +131,26 @@ class staggered_grid:
 
 
 
+
+
+'''
+Discrete vorticity operator
+'''
+def vorticity(u, v, vorticity_mesh_grid):
+    '''
+    Compute the vorticity at the inner cell vertices
+    '''
+    X, Y = vorticity_mesh_grid
+    dx = X[0, 1] - X[0, 0]
+    dy = Y[1, 0] - Y[0, 0]
+
+
+    vorticity = (-u[:-1, 1:] + u[1:, 1:-1]) / dx + (-v[1:-1, :-1] + v[1:-1, 1:]) / dy
+    return vorticity
+
+
+
+
      
 
 
@@ -127,17 +159,21 @@ class staggered_grid:
 Discrete divergence operator
 TODO: Test this part
 '''
-def divergence(u, v, mesh_grid):
-    # Central difference is used for the divergence operator
-    # Since we're using the staggered grid, the divergence is at the cell centers
-    x_grid, y_grid = mesh_grid
+def divergence(u, v, spatial_mesh_grid):
+    '''
+    Central difference is used for the divergence operator
+    Since we're using the staggered grid, the divergence is at the cell centers
+    The spatial mesh grid is used in order to compute the divergence at the cell centers
+    '''
+
+    x_grid, y_grid = spatial_mesh_grid
     dx = x_grid[0, 1] - x_grid[0, 0]
     dy = y_grid[1, 0] - y_grid[0, 0]
 
     Nx, Ny = x_grid.shape
     # The divergence are calculated at the cell centers
-    div = np.zeros((Nx-1, Ny-1))
-    div[1:-1, 1:-1] = (u[:, 1:] - u[:, :-1]) / dx + (v[1:, :] - v[:-1, :]) / dy
+    div = np.zeros((Nx, Ny))
+    div = (u[:, 1:] - u[:, :-1]) / dx + (v[1:, :] - v[:-1, :]) / dy
     return div
 
 
