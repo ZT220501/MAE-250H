@@ -2,6 +2,10 @@ import numpy as np
 from numpy import float64
 import matplotlib.pyplot as plt
 
+'''
+This is the file for the utility functions, including the conjugate gradient method, the staggered grid, and all the operators.
+'''
+
 
 
 '''
