@@ -120,13 +120,39 @@ class staggered_grid:
         return self.vorticity
     
 
-    def visualize(self):
+    def visualize_velocity(self):
         '''
-        Visualize the staggered grid
+        Visualize the x and y components of the velocity field
+        In order to do the visualization, we need to make sure that the velocity field is defined at the centers
+        Thus interpolation of the velocity field is done here, so that the pressure_mesh_grid is used.
         '''
-        plt.figure(figsize=(10, 10))
-        plt.pcolormesh(self.x_grid, self.y_grid, self.pressure_grid)
-        plt.colorbar()
+        X, Y = self.pressure_mesh_grid
+        # Interpolate the x-component of the velocity field to the pressure mesh grid
+        u_interpolated = (self.u[:, :-1] + self.u[:, 1:]) / 2
+        v_interpolated = (self.v[:-1, :] + self.v[1:, :]) / 2
+
+
+        plt.quiver(X, Y, u_interpolated, v_interpolated, color='r', scale=1, scale_units='xy')
+        plt.title('Staggered Grid Velocity Field')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.axis('equal')
+        plt.grid(True)
+
+    def visualize_vorticity(self):
+        X, Y = self.vorticity_mesh_grid
+        plt.contourf(X, Y, self.vorticity, cmap='bwr')
+        plt.colorbar(label='Vorticity')
+        plt.title('Vorticity Field')
+        plt.axis('equal')
+        plt.show()
+
+    def visualize_pressure(self):
+        X, Y = self.pressure_mesh_grid
+        plt.contourf(X, Y, self.pressure, cmap='bwr')
+        plt.colorbar(label='Pressure')
+        plt.title('Pressure Field')
+        plt.axis('equal')
         plt.show()
 
 
@@ -145,7 +171,7 @@ def vorticity(u, v, vorticity_mesh_grid):
     dy = Y[1, 0] - Y[0, 0]
 
 
-    vorticity = (-u[:-1, 1:] + u[1:, 1:-1]) / dx + (-v[1:-1, :-1] + v[1:-1, 1:]) / dy
+    vorticity = (-u[:-1, 1:-1] + u[1:, 1:-1]) / dx + (-v[1:-1, :-1] + v[1:-1, 1:]) / dy
     return vorticity
 
 
