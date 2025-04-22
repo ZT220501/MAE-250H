@@ -30,6 +30,7 @@ def conjugate_gradient(A, b, x0, tol=1e-6, max_iter=100):
 
         # Exit the algorithm if the residual is small enough
         if np.linalg.norm(r_new) < tol:
+            print("Converged in {} iterations".format(i+1))
             return x
         
         beta = np.dot(r_new, r_new) / r_old_inner_product
