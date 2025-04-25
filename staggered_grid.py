@@ -10,7 +10,7 @@ Generate the staggered grid.
 The position of the variables have been verified.
 TODO: Test the operator implementations.
 '''
-class staggered_grid:
+class StaggeredGrid:
 
 
     def __init__(self, Lx, Ly, Nx, Ny, initial_condition_velocity, initial_condition_pressure):
