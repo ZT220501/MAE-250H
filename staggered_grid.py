@@ -97,13 +97,13 @@ class StaggeredGrid:
     def visualize_velocity(self):
         '''
         Visualize the x and y components of the velocity field
-        In order to do the visualization, we need to make sure that the velocity field is defined at the centers
+        In order to do the visualization, we need to make sure that the velocity field is defined at the vertices of the cell.
         Thus interpolation of the velocity field is done here, so that the pressure_mesh_grid is used.
         '''
-        X, Y = self.pressure_mesh_grid
+        X, Y = self.vorticity_mesh_grid
         # Interpolate the x-component of the velocity field to the pressure mesh grid
-        u_interpolated = (self.u[:, :-1] + self.u[:, 1:]) / 2
-        v_interpolated = (self.v[:-1, :] + self.v[1:, :]) / 2
+        u_interpolated = (self.u[:-1, 1:-1] + self.u[1:, 1:-1]) / 2
+        v_interpolated = (self.v[1:-1, :-1] + self.v[1:-1, 1:]) / 2
 
 
         plt.quiver(X, Y, u_interpolated, v_interpolated, color='r', scale=1, scale_units='xy')
