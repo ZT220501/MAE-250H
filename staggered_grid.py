@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import importlib
+import operators
 
+importlib.reload(operators)
 from operators import vorticity, divergence, gradient
 
 
@@ -94,7 +97,7 @@ class StaggeredGrid:
         return self.vorticity
     
 
-    def visualize_velocity(self):
+    def visualize_velocity(self, scale=0.5):
         '''
         Visualize the x and y components of the velocity field
         In order to do the visualization, we need to make sure that the velocity field is defined at the vertices of the cell.
@@ -106,12 +109,14 @@ class StaggeredGrid:
         v_interpolated = (self.v[1:-1, :-1] + self.v[1:-1, 1:]) / 2
 
 
-        plt.quiver(X, Y, u_interpolated, v_interpolated, color='r', scale=1, scale_units='xy')
+        plt.quiver(X, Y, u_interpolated, v_interpolated, color='blue', scale=scale, scale_units='xy')
         plt.title('Staggered Grid Velocity Field')
         plt.xlabel('x')
         plt.ylabel('y')
+        plt.xticks(np.round(X[0, :], 2))
+        plt.yticks(np.round(Y[:, 0], 2))
         plt.axis('equal')
-        plt.grid(True)
+        plt.grid(axis='both')
 
     def visualize_vorticity(self):
         X, Y = self.vorticity_mesh_grid

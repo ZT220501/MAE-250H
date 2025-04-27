@@ -24,8 +24,7 @@ def vorticity(u, v, vorticity_mesh_grid):
     dx = X[0, 1] - X[0, 0]
     dy = Y[1, 0] - Y[0, 0]
 
-
-    vorticity = (-u[:-1, 1:-1] + u[1:, 1:-1]) / dx + (-v[1:-1, :-1] + v[1:-1, 1:]) / dy
+    vorticity = (-v[1:-1, :-1] + v[1:-1, 1:]) / dx - (-u[:-1, 1:-1] + u[1:, 1:-1]) / dy
     return vorticity
 
 
