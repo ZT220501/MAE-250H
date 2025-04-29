@@ -44,6 +44,8 @@ class StaggeredGrid:
         # Define the mesh grid for the center points
         self.pressure_mesh_grid = np.meshgrid(np.linspace(self.dx/2, Lx-self.dx/2, Nx), np.linspace(self.dy/2, Ly-self.dy/2, Ny))
         # Define the mesh grid for the velocity points
+        # The velocity components are only defined at the inner points, 
+        # since the boundary points are not unknown variables.
         self.u_mesh_grid = np.meshgrid(np.linspace(0, Lx, Nx+1), np.linspace(self.dy/2, Ly-self.dy/2, Ny))
         self.v_mesh_grid = np.meshgrid(np.linspace(self.dx/2, Lx-self.dx/2, Nx), np.linspace(0, Ly, Ny+1))
         # Define the mesh grid for the vorticity points

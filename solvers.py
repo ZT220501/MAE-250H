@@ -74,10 +74,16 @@ class transport_solver:
         return self.u_total[-1]
     
 
-    def visualize(self, idx):
+    def visualize(self, idx_list):
         plt.plot(self.x_grid, self.u_total[0])
-        plt.plot(self.x_grid, self.u_total[idx])
-        plt.legend(["Initial condition", 'Time ' + str(round(self.t_total[idx], 2))])
+        legend_list = ["Initial condition"]
+        for idx in idx_list:
+            plt.plot(self.x_grid, self.u_total[idx])
+            legend_list.append('Time ' + str(round(self.t_total[idx], 2)))
+        plt.xlabel("x")
+        plt.ylabel("u")
+        plt.title("Advection equation with " + self.discretization_method + " difference scheme", fontsize=12)
+        plt.legend(legend_list, fontsize=12)
         plt.show()
 
 
