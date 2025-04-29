@@ -77,7 +77,7 @@ class transport_solver:
     def visualize(self, idx):
         plt.plot(self.x_grid, self.u_total[0])
         plt.plot(self.x_grid, self.u_total[idx])
-        plt.legend(['Time ' + str(round(self.t_total[idx], 2))])
+        plt.legend(["Initial condition", 'Time ' + str(round(self.t_total[idx], 2))])
         plt.show()
 
 
