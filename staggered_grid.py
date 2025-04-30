@@ -56,35 +56,34 @@ class StaggeredGrid:
         # Define the pressure at the cell centers using the initial condition
         # We pin the pressure at the bottom left corner to 0, so that it's always 0.
         self.pressure = initial_condition_pressure(self.pressure_mesh_grid)
-        self.pressure[0, 0] = 0
-        self.pressure_pointer = self.pointer_pressure()
+        self.pressure[0, 0] = 0                                             # Manually enforce the pressure at the bottom left corner to be 0.
+        self.pressure_vector = self.pressure_2D_to_1D()                     # Vectorized representation of the pressure field.
+        self.pressure_pointer = self.pointer_pressure()                     # Pointer that maps the 2D index of the pressure field to the 1D index of the pressure field.
 
         # Define the velocity field at the faces using the initial condition
-        # self.velocity contains the stacked u, v at the NON-BOUNDARY faces!!
-        self.u, self.v = initial_condition_velocity(self.u_mesh_grid, self.v_mesh_grid)
-        # self.velocity = np.stack((self.u[:, 1:-1].reshape(-1), self.v[1:-1, :].reshape(-1)), axis=0)
-        self.u_pointer, self.v_pointer = self.pointer_velocity()
-
-        # Compute the vorticity at the cell centers based on the velocity field
-        self.vorticity = vorticity(self.u, self.v, self.vorticity_mesh_grid)
+        # self.u, self.v, and self.velocity contains the stacked u, v at the NON-BOUNDARY faces!!
+        self.u, self.v = initial_condition_velocity(self.u_mesh_grid_inner, self.v_mesh_grid_inner)
+        self.velocity = self.velocity_2D_to_1D()                            # Vectorized representation of the velocity field.  
+        self.u_pointer, self.v_pointer = self.pointer_velocity()            # Pointer that maps the 2D index of the velocity field to the 1D index of the velocity field.
 
 
 
+
+    ###############################
+    # Compute discrete quantities #
+    ###############################
     def compute_divergence(self):
         '''
         Compute the divergence of the velocity field
         '''
         return divergence(self.u, self.v, self.pressure_mesh_grid)
     
-
     def compute_gradient(self):
         '''
         Compute the gradient of the pressure field
         '''
         return gradient(self.pressure, self.spatial_mesh_grid)
     
-
-
     def compute_vorticity(self):
         '''
         Compute the vorticity of the velocity field
@@ -92,6 +91,9 @@ class StaggeredGrid:
         return vorticity(self.u, self.v, self.vorticity_mesh_grid)
 
 
+    #################
+    # Get functions #
+    #################
     # Get the grid points
     def get_grid(self, inner_grid=False):
         if inner_grid:
@@ -100,48 +102,100 @@ class StaggeredGrid:
             return self.spatial_mesh_grid, self.pressure_mesh_grid, self.u_mesh_grid, self.v_mesh_grid, self.vorticity_mesh_grid
     # Get the pressures at the cell centers
     def get_pressure(self):
-        return self.pressure
+        return self.pressure, self.pressure_vector, self.pressure_pointer
     # Get the velocities at the faces
     def get_velocity(self):
-        return self.u, self.v, self.velocity
+        return self.u, self.v, self.velocity, self.u_pointer, self.v_pointer
     # Get the vorticity at the cell vertices
     def get_vorticity(self):
         return self.vorticity
     
 
-    # Pointer functions
+
+    #####################
+    # Pointer functions #
+    #####################
     def pointer_velocity(self):
         '''
         Generate a map that maps the 2D index of the 
         velocity field to the 1D index of the velocity field.
         '''
         idx = 0
-        u_pointer = np.zeros(self.u[:, 1:-1].shape)
-        v_pointer = np.zeros(self.v[1:-1, :].shape)
+        u_pointer = np.zeros(self.u.shape)
+        v_pointer = np.zeros(self.v.shape)
 
-        for i in range(self.u[:, 1:-1].shape[0]):
-            for j in range(self.u[:, 1:-1].shape[1]):
+        for i in range(self.u.shape[0]):
+            for j in range(self.u.shape[1]):
                 u_pointer[i, j] = idx
                 idx += 1
         # We do NOT reset the idx in between.
-        for i in range(self.v[1:-1, :].shape[0]):
-            for j in range(self.v[1:-1, :].shape[1]):
+        for i in range(self.v.shape[0]):
+            for j in range(self.v.shape[1]):
                 v_pointer[i, j] = idx
                 idx += 1
 
-        return u_pointer, v_pointer
+        return u_pointer.astype(int), v_pointer.astype(int)
     
     def pointer_pressure(self):
         '''
         Generate a map that maps the 2D index of the 
         pressure field to the 1D index of the pressure field.
-        TODO: Finish this.
         '''
-        pass
+        idx = 0
+        pressure_pointer = np.zeros(self.pressure.shape)
+        for i in range(self.pressure.shape[0]):
+            for j in range(self.pressure.shape[1]):
+                if i == 0 and j == 0:
+                    # Pinned pressure value at the bottom left corner.
+                    # We set it to NaN, so that we'll not use it in the computation by mistake.
+                    pressure_pointer[i, j] = np.nan
+                else:
+                    pressure_pointer[i, j] = idx
+                    idx += 1
+        return pressure_pointer.astype(int)
 
+
+    ###################################################
+    # Synchronization of 2D and 1D pressure, velocity #
+    ###################################################
+    def pressure_2D_to_1D(self):
+        '''
+        After changing the 2D representation of the pressure field,
+        we need to update the 1D representation of the pressure field.
+        '''
+        # The bottom left corner is pinned to 0, so that we 
+        # don't need to solve it.
+        return self.pressure.reshape(-1)[1:]
     
+    def velocity_2D_to_1D(self):
+        '''
+        After changing the 2D representation of the pressure field,
+        we need to update the 1D representation of the velocity field.
+        '''
+        # The boundary velocities are specified, so that we
+        # don't need to solve them.
+        return np.concatenate((self.u.reshape(-1), self.v.reshape(-1)))
     
-    # Visualization functions
+    def pressure_1D_to_2D(self):
+        '''
+        After changing the 1D representation of the pressure field,
+        we need to update the 2D representation of the pressure field.
+        '''
+        pressure = np.insert(self.pressure_vector, 0, 0)
+        return pressure.reshape(self.Nx, self.Ny)
+    
+    def velocity_1D_to_2D(self):
+        '''
+        After changing the 1D representation of the velocity field,
+        we need to update the 2D representation of the velocity field.
+        '''
+        u = self.velocity[:self.u_pointer.size].reshape(self.u.shape)
+        v = self.velocity[self.u_pointer.size:].reshape(self.v.shape)
+        return u, v
+
+    ###########################
+    # Visualization functions #
+    ###########################
     def visualize_velocity(self, scale=0.5):
         '''
         Visualize the x and y components of the velocity field, on the inner grids.
@@ -150,8 +204,8 @@ class StaggeredGrid:
         '''
         X, Y = self.vorticity_mesh_grid
         # Interpolate the x-component of the velocity field to the pressure mesh grid
-        u_interpolated = (self.u[:-1, 1:-1] + self.u[1:, 1:-1]) / 2
-        v_interpolated = (self.v[1:-1, :-1] + self.v[1:-1, 1:]) / 2
+        u_interpolated = (self.u[:-1, :] + self.u[1:, :]) / 2
+        v_interpolated = (self.v[:, :-1] + self.v[:, 1:]) / 2
 
 
         plt.quiver(X, Y, u_interpolated, v_interpolated, color='blue', scale=scale, scale_units='xy')
@@ -165,7 +219,8 @@ class StaggeredGrid:
 
     def visualize_vorticity(self):
         X, Y = self.vorticity_mesh_grid
-        plt.contourf(X, Y, self.vorticity, cmap='bwr')
+        vorticity = self.compute_vorticity()
+        plt.contourf(X, Y, vorticity, cmap='bwr')
         plt.colorbar(label='Vorticity')
         plt.title('Vorticity Field', fontsize=16)
         plt.xticks(np.round(X[0, :], 2), fontsize=12)
