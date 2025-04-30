@@ -48,16 +48,21 @@ class StaggeredGrid:
         # since the boundary points are not unknown variables.
         self.u_mesh_grid = np.meshgrid(np.linspace(0, Lx, Nx+1), np.linspace(self.dy/2, Ly-self.dy/2, Ny))
         self.v_mesh_grid = np.meshgrid(np.linspace(self.dx/2, Lx-self.dx/2, Nx), np.linspace(0, Ly, Ny+1))
+        self.u_mesh_grid_inner = np.meshgrid(np.linspace(self.dx, Lx-self.dx, Nx-1), np.linspace(self.dy/2, Ly-self.dy/2, Ny))
+        self.v_mesh_grid_inner = np.meshgrid(np.linspace(self.dx/2, Lx-self.dx/2, Nx), np.linspace(self.dy, Ly-self.dy, Ny-1))
         # Define the mesh grid for the vorticity points
         self.vorticity_mesh_grid = np.meshgrid(np.linspace(self.dx, Lx-self.dx, Nx-1), np.linspace(self.dy, Ly-self.dy, Ny-1))
 
         # Define the pressure at the cell centers using the initial condition
+        # We pin the pressure at the bottom left corner to 0, so that it's always 0.
         self.pressure = initial_condition_pressure(self.pressure_mesh_grid)
+        self.pressure[0, 0] = 0
+        self.pressure_pointer = self.pointer_pressure()
 
         # Define the velocity field at the faces using the initial condition
-        # self.velocity contains the stacked u, v at the non-boundary faces.
+        # self.velocity contains the stacked u, v at the NON-BOUNDARY faces!!
         self.u, self.v = initial_condition_velocity(self.u_mesh_grid, self.v_mesh_grid)
-        self.velocity = np.stack((self.u.reshape(-1), self.v.reshape(-1)), axis=0)
+        # self.velocity = np.stack((self.u[:, 1:-1].reshape(-1), self.v[1:-1, :].reshape(-1)), axis=0)
         self.u_pointer, self.v_pointer = self.pointer_velocity()
 
         # Compute the vorticity at the cell centers based on the velocity field
@@ -88,8 +93,11 @@ class StaggeredGrid:
 
 
     # Get the grid points
-    def get_grid(self):
-        return self.spatial_mesh_grid, self.pressure_mesh_grid, self.u_mesh_grid, self.v_mesh_grid, self.vorticity_mesh_grid
+    def get_grid(self, inner_grid=False):
+        if inner_grid:
+            return self.spatial_mesh_grid, self.pressure_mesh_grid, self.u_mesh_grid_inner, self.v_mesh_grid_inner, self.vorticity_mesh_grid
+        else:
+            return self.spatial_mesh_grid, self.pressure_mesh_grid, self.u_mesh_grid, self.v_mesh_grid, self.vorticity_mesh_grid
     # Get the pressures at the cell centers
     def get_pressure(self):
         return self.pressure
@@ -108,16 +116,16 @@ class StaggeredGrid:
         velocity field to the 1D index of the velocity field.
         '''
         idx = 0
-        u_pointer = np.zeros(self.u.shape)
-        v_pointer = np.zeros(self.v.shape)
+        u_pointer = np.zeros(self.u[:, 1:-1].shape)
+        v_pointer = np.zeros(self.v[1:-1, :].shape)
 
-        for i in range(self.u.shape[0]):
-            for j in range(self.u.shape[1]):
+        for i in range(self.u[:, 1:-1].shape[0]):
+            for j in range(self.u[:, 1:-1].shape[1]):
                 u_pointer[i, j] = idx
                 idx += 1
         # We do NOT reset the idx in between.
-        for i in range(self.v.shape[0]):
-            for j in range(self.v.shape[1]):
+        for i in range(self.v[1:-1, :].shape[0]):
+            for j in range(self.v[1:-1, :].shape[1]):
                 v_pointer[i, j] = idx
                 idx += 1
 
@@ -136,7 +144,7 @@ class StaggeredGrid:
     # Visualization functions
     def visualize_velocity(self, scale=0.5):
         '''
-        Visualize the x and y components of the velocity field
+        Visualize the x and y components of the velocity field, on the inner grids.
         In order to do the visualization, we need to make sure that the velocity field is defined at the vertices of the cell.
         Thus interpolation of the velocity field is done here, so that the pressure_mesh_grid is used.
         '''
@@ -147,11 +155,11 @@ class StaggeredGrid:
 
 
         plt.quiver(X, Y, u_interpolated, v_interpolated, color='blue', scale=scale, scale_units='xy')
-        plt.title('Staggered Grid Velocity Field')
-        plt.xlabel('x')
-        plt.ylabel('y')
-        plt.xticks(np.round(X[0, :], 2))
-        plt.yticks(np.round(Y[:, 0], 2))
+        plt.title('Staggered Grid Velocity Field', fontsize=16)
+        plt.xlabel('x', fontsize=16)
+        plt.ylabel('y', fontsize=16)
+        plt.xticks(np.round(X[0, :], 2), fontsize=16)
+        plt.yticks(np.round(Y[:, 0], 2), fontsize=16)
         plt.axis('equal')
         plt.grid(axis='both')
 
@@ -159,7 +167,9 @@ class StaggeredGrid:
         X, Y = self.vorticity_mesh_grid
         plt.contourf(X, Y, self.vorticity, cmap='bwr')
         plt.colorbar(label='Vorticity')
-        plt.title('Vorticity Field')
+        plt.title('Vorticity Field', fontsize=16)
+        plt.xticks(np.round(X[0, :], 2), fontsize=12)
+        plt.yticks(np.round(Y[:, 0], 2), fontsize=12)
         plt.axis('equal')
         plt.show()
 
@@ -167,6 +177,8 @@ class StaggeredGrid:
         X, Y = self.pressure_mesh_grid
         plt.contourf(X, Y, self.pressure, cmap='bwr')
         plt.colorbar(label='Pressure')
-        plt.title('Pressure Field')
+        plt.title('Pressure Field', fontsize=16)
+        plt.xticks(np.round(X[0, :], 2), fontsize=12)
+        plt.yticks(np.round(Y[:, 0], 2), fontsize=12)
         plt.axis('equal')
         plt.show()
