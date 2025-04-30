@@ -36,7 +36,6 @@ def vorticity(u, v, vorticity_mesh_grid):
 
 '''
 Discrete divergence operator
-TODO: Test this part
 '''
 def divergence(u, v, pressure_mesh_grid):
     '''
@@ -61,24 +60,24 @@ def divergence(u, v, pressure_mesh_grid):
 Discrete gradient operator
 TODO: Test this part
 '''
-def gradient(p, mesh_grid):
+def gradient(p, pressure_mesh_grid):
     '''
     Calculate the gradient of a scalar field p at the cell faces.
     The x-component of the gradient is at the x-faces, and the y-component of the gradient is at the y-faces.
 
     p: np.ndarray(Nx, Ny)
-    mesh_grid: np.meshgrid with x and y coordinates have shapes (Nx+1, Ny+1)
+    pressure_mesh_grid: np.meshgrid with x and y coordinates have shapes (Nx, Ny)
     '''
-    x_grid, y_grid = mesh_grid
-    dx = x_grid[0, 1] - x_grid[0, 0]
-    dy = y_grid[1, 0] - y_grid[0, 0]
+    X, Y = pressure_mesh_grid
+    dx = X[0, 1] - X[0, 0]
+    dy = Y[1, 0] - Y[0, 0]
 
-    Nx, Ny = x_grid.shape
-    grad_x = np.zeros((Nx-1, Ny))
-    grad_y = np.zeros((Nx, Ny-1))
+    Nx, Ny = X.shape
+    grad_x = np.zeros((Nx, Ny-1))
+    grad_y = np.zeros((Nx-1, Ny))
 
-    grad_x[:, 1:-1] = (p[:, 1:] - p[:, :-1]) / dx
-    grad_y[1:-1, :] = (p[1:, :] - p[:-1, :]) / dy
+    grad_x = (p[:, 1:] - p[:, :-1]) / dx
+    grad_y = (p[1:, :] - p[:-1, :]) / dy
     return grad_x, grad_y
 
 

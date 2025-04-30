@@ -82,7 +82,7 @@ class StaggeredGrid:
         '''
         Compute the gradient of the pressure field
         '''
-        return gradient(self.pressure, self.spatial_mesh_grid)
+        return gradient(self.pressure, self.pressure_mesh_grid)
     
     def compute_vorticity(self):
         '''
