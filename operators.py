@@ -89,6 +89,7 @@ def gradient(p, pressure_mesh_grid):
 
     grad_x = (p[:, 1:] - p[:, :-1]) / dx
     grad_y = (p[1:, :] - p[:-1, :]) / dy
+
     return grad_x, grad_y
 
 
