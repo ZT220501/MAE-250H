@@ -51,7 +51,18 @@ def divergence(u, v, pressure_mesh_grid):
     Nx, Ny = X.shape
     # The divergence are calculated at the cell centers
     div = np.zeros((Nx, Ny))
-    div = (u[:, 1:] - u[:, :-1]) / dx + (v[1:, :] - v[:-1, :]) / dy
+
+    # Extend the velocity field to the boundarys
+    # Since we deal with the lid driven cavity problem, WLOG we can assume that the velocity field is zero on the boundary
+    # and this won't hurt the velocity divergence calculation
+    u_extended = np.zeros((Nx, Ny+1))
+    v_extended = np.zeros((Nx+1, Ny))
+
+    u_extended[:, 1:-1] = u
+    v_extended[1:-1, :] = v
+
+
+    div = (u_extended[:, 1:] - u_extended[:, :-1]) / dx + (v_extended[1:, :] - v_extended[:-1, :]) / dy
     return div
 
 

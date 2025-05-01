@@ -8,7 +8,7 @@ This is the file for the solvers, including the ones for the transport equation,
 '''
 
 
-class transport_solver:
+class TransportSolver:
     '''
     This is the class for solving the 1D transport equation.
     '''
@@ -100,9 +100,21 @@ class transport_solver:
     def get_x_grid(self):
         return self.x_grid
 
-            
 
-    
+
+
+
+class LidDrivenCavitySolver:
+    '''
+    This is the class for solving the lid driven cavity problem.
+    TODO: Implement the solver.
+    '''
+    def __init__(self, Re, Nx, Ny, dt, dx, dy, initial_condition, T):
+        self.Re = Re
+        self.Nx = Nx
+        self.Ny = Ny
+        self.dt = dt
+        self.dx = dx
 
 
 

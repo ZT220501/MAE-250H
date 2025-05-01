@@ -95,7 +95,7 @@ class StaggeredGrid:
     # Get functions #
     #################
     # Get the grid points
-    def get_grid(self, inner_grid=False):
+    def get_grid(self, inner_grid=True):
         if inner_grid:
             return self.spatial_mesh_grid, self.pressure_mesh_grid, self.u_mesh_grid_inner, self.v_mesh_grid_inner, self.vorticity_mesh_grid
         else:
