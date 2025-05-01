@@ -37,7 +37,7 @@ def vorticity(u, v, vorticity_mesh_grid):
 '''
 Discrete divergence operator
 '''
-def divergence(u, v, pressure_mesh_grid):
+def divergence(u, v, pressure_mesh_grid, v_top, v_bottom, u_left, u_right):
     '''
     Central difference is used for the divergence operator
     Since we're using the staggered grid, the divergence is at the cell centers
@@ -67,9 +67,24 @@ def divergence(u, v, pressure_mesh_grid):
 
 
 
+
+def divergence_bc(u, v, pressure_mesh_grid):
+    '''
+    Calculate the divergence at the boundary
+    '''
+    X, Y = pressure_mesh_grid
+
+    full_div = divergence(u, v, pressure_mesh_grid)
+    # div_bc = TODO: Finish this! 
+
+
+
+
+
+
+
 '''
 Discrete gradient operator
-TODO: Test this part
 '''
 def gradient(p, pressure_mesh_grid):
     '''
@@ -99,46 +114,27 @@ def gradient(p, pressure_mesh_grid):
 '''
 2D Discrete Laplacian operator
 '''
-def laplacian(u, mesh_grid, bc="Periodic"):
+def laplacian(u, mesh_grid, U):
     '''
-    Implement the 2D discrete Laplacian, under Dirichlet, Neumann, and periodic BC
+    Calculate the the Laplacian at the FIXME: where is the Laplacian?
     '''
     x_grid, y_grid = mesh_grid
     # Only consider the uniform grid case
     u_laplacian = np.zeros(u.shape, dtype=float64)
     h = x_grid[0, 1] - x_grid[0, 0]
 
-    if bc == "Periodic":
-        # Periodic boundary condition
-        # Edge case
-        u_laplacian[0, 1:-1] = (u[1, 1:-1] - 2 * u[0, 1:-1] + u[-2, 1:-1]) / h**2 + (u[0, 2:] - 2 * u[0, 1:-1] + u[0, :-2]) / h**2
-        u_laplacian[-1, 1:-1] = (u[1, 1:-1] - 2 * u[-1, 1:-1] + u[-2, 1:-1]) / h**2 + (u[-1, 2:] - 2 * u[-1, 1:-1] + u[-1, :-2]) / h**2
-        u_laplacian[1:-1, 0] = (u[1:-1, 1] - 2 * u[1:-1, 0] + u[1:-1, -2]) / h**2 + (u[2:, 0] - 2 * u[1:-1, 0] + u[:-2, 0]) / h**2
-        u_laplacian[1:-1, -1] = (u[1:-1, 1] - 2 * u[1:-1, -1] + u[1:-1, -2]) / h**2 + (u[2:, -1] - 2 * u[1:-1, -1] + u[:-2, -1]) / h**2
 
-        # Corner case
-        u_laplacian[0, 0] = (u[1, 0] - 2 * u[0, 0] + u[-2, 0]) / h**2 + (u[0, 1] - 2 * u[0, 0] + u[0, -2]) / h**2
-        u_laplacian[-1, 0] = (u[1, 0] - 2 * u[-1, 0] + u[-2, 0]) / h**2 + (u[-1, 1] - 2 * u[-1, 0] + u[-1, -2]) / h**2
-        u_laplacian[0, -1] = (u[0, 1] - 2 * u[0, -1] + u[0, -2]) / h**2 + (u[1, -1] - 2 * u[0, -1] + u[-2, -1]) / h**2
-        u_laplacian[-1, -1] = (u[-2, -1] - 2 * u[-1, -1] + u[1, -1]) / h**2 + (u[-1, -2] - 2 * u[-1, -1] + u[-1, 1]) / h**2
+    u_laplacian[0, 1:-1] = (u[1, 1:-1] - 2 * u[0, 1:-1] + u[-2, 1:-1]) / h**2 + (u[0, 2:] - 2 * u[0, 1:-1] + u[0, :-2]) / h**2
+    u_laplacian[-1, 1:-1] = (u[1, 1:-1] - 2 * u[-1, 1:-1] + u[-2, 1:-1]) / h**2 + (u[-1, 2:] - 2 * u[-1, 1:-1] + u[-1, :-2]) / h**2
+    u_laplacian[1:-1, 0] = (u[1:-1, 1] - 2 * u[1:-1, 0] + u[1:-1, -2]) / h**2 + (u[2:, 0] - 2 * u[1:-1, 0] + u[:-2, 0]) / h**2
+    u_laplacian[1:-1, -1] = (u[1:-1, 1] - 2 * u[1:-1, -1] + u[1:-1, -2]) / h**2 + (u[2:, -1] - 2 * u[1:-1, -1] + u[:-2, -1]) / h**2
 
-    elif bc == "Neumann":
-        # (Homogeneous) Neumann boundary condition
-        # Here we use the second order Neumann boundary condition approximation
-        # Assume that near the boundary, the mesh grid is uniform
-         u_laplacian[0, 1:-1] = (2 * u[1, 1:-1] + u[0, :-2] + u[0, 2:] - 4 * u[0, 1:-1]) / (y_grid[1, 1:-1] - y_grid[0, 1:-1])**2
-         u_laplacian[-1, 1:-1] = (2 * u[-2, 1:-1] + u[-1, :-2] + u[-1, 2:] - 4 * u[-1, 1:-1]) / (y_grid[-1, 1:-1] - y_grid[-2, 1:-1])**2
-         u_laplacian[1:-1, 0] =(2 * u[1:-1, 1] + u[:-2, 0] + u[2:, 0] - 4 * u[1:-1, 0]) / (x_grid[1:-1, 1] - x_grid[1:-1, 0])**2
-         u_laplacian[1:-1, -1] = (2 * u[1:-1, -2] + u[:-2, -1] + u[2:, -1] - 4 * u[1:-1, -1]) / (x_grid[1:-1, -1] - x_grid[1:-1, -2])**2
- 
-         # Treat corner points for the Neumann boundary condition
-         # We assume that the grid are uniform and the x&y direction spatial discretization are of the same size, for all corners
-         u_laplacian[0, 0] = (2 * u[0, 1] + 2 * u[1, 0] - 4 * u[0, 0]) / (y_grid[1, 0] - y_grid[0, 0])**2
-         u_laplacian[0, -1] = (2 * u[0, -2] + 2 * u[1, -1] - 4 * u[0, -1]) / (y_grid[1, 0] - y_grid[0, 0])**2
-         u_laplacian[-1, 0] = (2 * u[-2, 0] + 2 * u[-1, 1] - 4 * u[-1, 0]) / (y_grid[1, 0] - y_grid[0, 0])**2
-         u_laplacian[-1, -1] = (2 * u[-2, -1] + 2 * u[-1, -2] - 4 * u[-1, -1]) / (y_grid[1, 0] - y_grid[0, 0])**2
-    else:
-        print("Wrong boundary condition; check your spelling.")
+    # Corner case
+    u_laplacian[0, 0] = (u[1, 0] - 2 * u[0, 0] + u[-2, 0]) / h**2 + (u[0, 1] - 2 * u[0, 0] + u[0, -2]) / h**2
+    u_laplacian[-1, 0] = (u[1, 0] - 2 * u[-1, 0] + u[-2, 0]) / h**2 + (u[-1, 1] - 2 * u[-1, 0] + u[-1, -2]) / h**2
+    u_laplacian[0, -1] = (u[0, 1] - 2 * u[0, -1] + u[0, -2]) / h**2 + (u[1, -1] - 2 * u[0, -1] + u[-2, -1]) / h**2
+    u_laplacian[-1, -1] = (u[-2, -1] - 2 * u[-1, -1] + u[1, -1]) / h**2 + (u[-1, -2] - 2 * u[-1, -1] + u[-1, 1]) / h**2
+
 
     x_central = x_grid[1:-1, 1:-1]
     x_left = x_grid[1:-1, :-2]
@@ -161,14 +157,25 @@ def laplacian(u, mesh_grid, bc="Periodic"):
 
 
 
-def nonlinear_advection(u_previous, mesh_grid, V0, vector_field):
+def nonlinear_advection(u, v, pressure_mesh_grid, U):
     '''
-    Solution for the advection equation in 2D, with the vector field \vec{v}=(V_0x, V_0y) or \vec{v}=(0, -V_0x)
+    Calculate the nonlinear advection term at the cell faces.
+    Here the implementation uses the divergence form.
+    Here U is the horizontal velocity at the top boundary.
+    '''
+    X, Y = pressure_mesh_grid
 
-    u_previous: the previous time step solution
-    mesh_grid: the mesh grid
-    dt: the time step
-    V0: the vector field strength
-    vector_field: the vector field
-    '''
-    pass
+    Nx, Ny = X.shape
+
+   # Extend the velocity field to the boundarys
+    # Since we deal with the lid driven cavity problem, WLOG we can assume that the velocity field is zero on the boundary
+    # and this won't hurt the velocity divergence calculation
+    u_extended = np.zeros((Nx, Ny+1))
+    v_extended = np.zeros((Nx+1, Ny))
+
+    u_extended[:, 1:-1] = u
+    v_extended[1:-1, :] = v
+
+
+
+    return
