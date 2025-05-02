@@ -37,7 +37,7 @@ def vorticity(u, v, vorticity_mesh_grid):
 '''
 Discrete divergence operator
 '''
-def divergence(u, v, pressure_mesh_grid, v_top, v_bottom, u_left, u_right):
+def divergence(u, v, pressure_mesh_grid, v_top=0, v_bottom=0, u_left=0, u_right=0):
     '''
     Central difference is used for the divergence operator
     Since we're using the staggered grid, the divergence is at the cell centers
@@ -47,35 +47,95 @@ def divergence(u, v, pressure_mesh_grid, v_top, v_bottom, u_left, u_right):
     X, Y = pressure_mesh_grid
     dx = X[0, 1] - X[0, 0]
     dy = Y[1, 0] - Y[0, 0]
-
     Nx, Ny = X.shape
+
+    if isinstance(v_top, float):
+        v_top = v_top * np.ones(Nx)
+    if isinstance(v_bottom, float):
+        v_bottom = v_bottom * np.ones(Nx)
+    if isinstance(u_left, float):
+        u_left = u_left * np.ones(Ny)
+    if isinstance(u_right, float):
+        u_right = u_right * np.ones(Ny)
+
+
     # The divergence are calculated at the cell centers
     div = np.zeros((Nx, Ny))
 
-    # Extend the velocity field to the boundarys
-    # Since we deal with the lid driven cavity problem, WLOG we can assume that the velocity field is zero on the boundary
-    # and this won't hurt the velocity divergence calculation
-    u_extended = np.zeros((Nx, Ny+1))
-    v_extended = np.zeros((Nx+1, Ny))
+    # Interior divergence
+    div[1:-1, 1:-1] = (u[1:-1, 1:] - u[1:-1, :-1]) / dx + (v[1:, 1:-1] - v[:-1, 1:-1]) / dy
 
-    u_extended[:, 1:-1] = u
-    v_extended[1:-1, :] = v
+    # Top boundary, exclude corners
+    div[0, 1:-1] = (u[0, 1:] - u[0, :-1]) / dx + (v[0, 1:-1] - v_top[1:-1]) / dy
+    # Bottom boundary, exclude corners
+    div[-1, 1:-1] = (u[-1, 1:] - u[-1, :-1]) / dx + (v_bottom[1:-1] - v[-1, 1:-1]) / dy
+    # Left boundary, exclude corners
+    div[1:-1, 0] = (u[1:-1, 0] - u_left[1:-1]) / dx + (v[1:, 0] - v[:-1, 0]) / dy
+    # Right boundary, exclude corners
+    div[1:-1, -1] = (u_right[1:-1] - u[1:-1, -1]) / dx + (v[1:, -1] - v[:-1, -1]) / dy
 
+    # Top-left corner
+    div[0, 0] = (u[0, 0] - u_left[0]) / dx + (v[0, 0] - v_top[0]) / dy
+    # Top-right corner
+    div[0, -1] = (u_right[0] - u[0, -1]) / dx + (v[0, -1] - v_top[-1]) / dy
+    # Bottom-left corner
+    div[-1, 0] = (u[-1, 0] - u_left[-1]) / dx + (v_bottom[0] - v[-1, 0]) / dy
+    # Bottom-right corner
+    div[-1, -1] = (u_right[-1] - u[-1, -1]) / dx + (v_bottom[-1] - v[-1, -1]) / dy
 
-    div = (u_extended[:, 1:] - u_extended[:, :-1]) / dx + (v_extended[1:, :] - v_extended[:-1, :]) / dy
+    # In divergence, we also pin the bottom-left corner value, as in the pressure case.
+    div[0, 0] = np.nan
+    
     return div
 
 
 
-
-def divergence_bc(u, v, pressure_mesh_grid):
+'''
+Discrete divergence operator at the boundary
+It has the same shape as the divergence operator, but only at the four boundaries are non-zero.
+'''
+def divergence_bc(pressure_mesh_grid, v_top=0, v_bottom=0, u_left=0, u_right=0):
     '''
     Calculate the divergence at the boundary
     '''
+    # FIXME: Currently the implementation is as in the class, but it looks quite confusing...
     X, Y = pressure_mesh_grid
+    dx = X[0, 1] - X[0, 0]
+    dy = Y[1, 0] - Y[0, 0]
+    Nx, Ny = X.shape
+    div_bc = np.zeros((Nx, Ny))
 
-    full_div = divergence(u, v, pressure_mesh_grid)
-    # div_bc = TODO: Finish this! 
+    if isinstance(v_top, float):
+        v_top = v_top * np.ones(Nx)
+    if isinstance(v_bottom, float):
+        v_bottom = v_bottom * np.ones(Nx)
+    if isinstance(u_left, float):
+        u_left = u_left * np.ones(Ny)
+    if isinstance(u_right, float):
+        u_right = u_right * np.ones(Ny)
+
+    # Top boundary, exclude corners
+    div_bc[0, 1:-1] = -v_top[1:-1] / dy
+    # Bottom boundary, exclude corners
+    div_bc[-1, 1:-1] = v_bottom[1:-1] / dy
+    # Left boundary, exclude corners
+    div_bc[1:-1, 0] = -u_left[1:-1] / dx
+    # Right boundary, exclude corners
+    div_bc[1:-1, -1] = u_right[1:-1] / dx
+
+    # Top-left corner
+    div_bc[0, 0] = -u_left[0] / dx - v_top[0] / dy
+    # Top-right corner
+    div_bc[0, -1] = u_right[0] / dx - v_top[-1] / dy
+    # Bottom-left corner
+    div_bc[-1, 0] = -u_left[-1] / dx + v_bottom[0] / dy
+    # Bottom-right corner
+    div_bc[-1, -1] = u_right[-1] / dx + v_bottom[-1] / dy
+
+    # In divergence, we also pin the bottom-left corner value, as in the pressure case.
+    div_bc[0, 0] = np.nan
+
+    return div_bc
 
 
 
@@ -112,7 +172,7 @@ def gradient(p, pressure_mesh_grid):
 
 
 '''
-2D Discrete Laplacian operator
+Discrete Laplacian operator
 '''
 def laplacian(u, mesh_grid, U):
     '''
