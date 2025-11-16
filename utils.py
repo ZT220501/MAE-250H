@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import float64
 import matplotlib.pyplot as plt
+from operators import laplacian
 
 '''
 This is the file for the utility functions.
@@ -39,7 +40,36 @@ def conjugate_gradient(A, b, x0, tol=1e-6, max_iter=100):
 
     raise ValueError("Maximum number of iterations reached")
 
+'''
+Conjugate Gradient Method for solving linear systems of equations Ax = b for the pressure Poisson equation
+'''
+def conjugate_gradient_poisson(b, x0, mesh_grid, tol=1e-6, max_iter=100):
+    '''
+    Conjugate Gradient Method for solving linear systems of equations Ax = b for the pressure Poisson equation
+    '''
+    x = x0
+    r_old = b - laplacian(x, mesh_grid)
+    p = r_old
+    r_new = r_old
 
+    for i in range(max_iter):
+        r_old_inner_product = np.dot(r_old, r_old)
+
+        Ap = laplacian(p, mesh_grid)
+        alpha = r_old_inner_product / np.dot(p, Ap)
+        x = x + alpha * p
+        r_new = r_old - alpha * Ap
+
+        # Exit the algorithm if the residual is small enough
+        if np.linalg.norm(r_new) < tol:
+            print("Converged in {} iterations".format(i+1))
+            return x
+        
+        beta = np.dot(r_new, r_new) / r_old_inner_product
+        p = r_new + beta * p
+        r_old = r_new
+
+    raise ValueError("Maximum number of iterations reached")
 
 
 

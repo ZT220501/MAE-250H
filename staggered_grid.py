@@ -15,7 +15,7 @@ The position of the variables have been verified.
 class StaggeredGrid:
 
 
-    def __init__(self, Lx, Ly, Nx, Ny, initial_condition_velocity, initial_condition_pressure):
+    def __init__(self, Lx, Ly, Nx, Ny, initial_condition_velocity, initial_condition_pressure, u_left=0.0, u_right=0.0, v_top=0.0, v_bottom=0.0):
         '''
         Initialize the staggered grid.
         In this implementation, it follows the convention of Python indexing, 
@@ -34,40 +34,21 @@ class StaggeredGrid:
         self.dx = Lx / Nx
         self.dy = Ly / Ny
 
-
-
-        '''
-        Staggered grid initialization
-        '''
-        # Define the mesh grid for the spatial points
-        self.spatial_mesh_grid = np.meshgrid(np.linspace(0, Lx, Nx+1), np.linspace(0, Ly, Ny+1))
-        # Define the mesh grid for the center points
-        self.pressure_mesh_grid = np.meshgrid(np.linspace(self.dx/2, Lx-self.dx/2, Nx), np.linspace(self.dy/2, Ly-self.dy/2, Ny))
-        # Define the mesh grid for the velocity points
-        # The velocity components are only defined at the inner points, 
-        # since the boundary points are not unknown variables.
-        self.u_mesh_grid = np.meshgrid(np.linspace(0, Lx, Nx+1), np.linspace(self.dy/2, Ly-self.dy/2, Ny))
-        self.v_mesh_grid = np.meshgrid(np.linspace(self.dx/2, Lx-self.dx/2, Nx), np.linspace(0, Ly, Ny+1))
-        self.u_mesh_grid_inner = np.meshgrid(np.linspace(self.dx, Lx-self.dx, Nx-1), np.linspace(self.dy/2, Ly-self.dy/2, Ny))
-        self.v_mesh_grid_inner = np.meshgrid(np.linspace(self.dx/2, Lx-self.dx/2, Nx), np.linspace(self.dy, Ly-self.dy, Ny-1))
-        # Define the mesh grid for the vorticity points
+        # Create mesh grids for visualization and initialization
+        self.u_mesh_grid = np.meshgrid(np.linspace(self.dx, Lx-self.dx, Nx-1), np.linspace(0.5*self.dy, Ly-0.5*self.dy, Ny))
+        self.v_mesh_grid = np.meshgrid(np.linspace(0.5*self.dx, Lx-0.5*self.dx, Nx), np.linspace(self.dy, Ly-self.dy, Ny-1))
+        self.pressure_mesh_grid = np.meshgrid(np.linspace(0.5*self.dx, Lx-0.5*self.dx, Nx), np.linspace(0.5*self.dy, Ly-0.5*self.dy, Ny))
         self.vorticity_mesh_grid = np.meshgrid(np.linspace(self.dx, Lx-self.dx, Nx-1), np.linspace(self.dy, Ly-self.dy, Ny-1))
 
-        # Define the pressure at the cell centers using the initial condition
-        # We pin the pressure at the bottom left corner to 0, so that it's always 0.
-        self.pressure = initial_condition_pressure(self.pressure_mesh_grid)
-        self.pressure[0, 0] = 0                                             # Manually enforce the pressure at the bottom left corner to be 0.
-        self.pressure_vector = self.pressure_2D_to_1D()                     # Vectorized representation of the pressure field.
-        self.pressure_pointer = self.pointer_pressure()                     # Pointer that maps the 2D index of the pressure field to the 1D index of the pressure field.
+        # Staggered grid initialization, 2D version
+        self.u, self.v = initial_condition_velocity(self.u_mesh_grid, self.v_mesh_grid)         # Shape (Nx-1, Ny) and (Nx, Ny-1)
+        self.pressure = initial_condition_pressure(self.pressure_mesh_grid)                     # Shape (Nx, Ny)
+        self.vorticity = np.zeros((Ny-1, Nx-1))                                                 # Shape (Nx-1, Ny-1)
 
-        # Define the velocity field at the faces using the initial condition
-        # self.u, self.v, and self.velocity contains the stacked u, v at the NON-BOUNDARY faces!!
-        self.u, self.v = initial_condition_velocity(self.u_mesh_grid_inner, self.v_mesh_grid_inner)
-        self.velocity = self.velocity_2D_to_1D()                            # Vectorized representation of the velocity field.  
-        self.u_pointer, self.v_pointer = self.pointer_velocity()            # Pointer that maps the 2D index of the velocity field to the 1D index of the velocity field.
-
-
-
+        # Staggered grid initialization, 1D version
+        self.u_vector, self.v_vector = self.velocity_2D_to_1D()                               # Shape (Nx-1)*Ny, Nx*(Ny-1)
+        self.pressure_vector = self.pressure_2D_to_1D()                                       # Shape Nx*Ny-1, pinned at the bottom left corner
+        self.vorticity_vector = self.vorticity_2D_to_1D()                                      # Shape (Nx-1)*(Ny-1)
 
     ###############################
     # Compute discrete quantities #
@@ -90,28 +71,15 @@ class StaggeredGrid:
         '''
         return vorticity(self.u, self.v, self.vorticity_mesh_grid)
 
-
     #################
     # Get functions #
     #################
-    # Get the grid points
-    def get_grid(self, inner_grid=True):
-        if inner_grid:
-            return self.spatial_mesh_grid, self.pressure_mesh_grid, self.u_mesh_grid_inner, self.v_mesh_grid_inner, self.vorticity_mesh_grid
-        else:
-            return self.spatial_mesh_grid, self.pressure_mesh_grid, self.u_mesh_grid, self.v_mesh_grid, self.vorticity_mesh_grid
-    # Get the pressures at the cell centers
-    def get_pressure(self):
-        return self.pressure, self.pressure_vector, self.pressure_pointer
-    # Get the velocities at the faces
-    def get_velocity(self):
-        return self.u, self.v, self.velocity, self.u_pointer, self.v_pointer
-    # Get the vorticity at the cell vertices
-    def get_vorticity(self):
-        return self.vorticity
+    def get_variables(self):
+        return self.u, self.v, self.pressure, self.vorticity
+    def get_mesh_grids(self):
+        return self.u_mesh_grid, self.v_mesh_grid, self.pressure_mesh_grid, self.vorticity_mesh_grid
+
     
-
-
     #####################
     # Pointer functions #
     #####################
@@ -120,17 +88,17 @@ class StaggeredGrid:
         Generate a map that maps the 2D index of the 
         velocity field to the 1D index of the velocity field.
         '''
-        idx = 0
-        u_pointer = np.zeros(self.u.shape)
-        v_pointer = np.zeros(self.v.shape)
+        u_pointer = np.zeros((self.Nx-1, self.Ny))
+        v_pointer = np.zeros((self.Nx, self.Ny-1))
 
-        for i in range(self.u.shape[0]):
-            for j in range(self.u.shape[1]):
+        idx = 0
+        for i in range(self.Nx-1):
+            for j in range(self.Ny):
                 u_pointer[i, j] = idx
                 idx += 1
-        # We do NOT reset the idx in between.
-        for i in range(self.v.shape[0]):
-            for j in range(self.v.shape[1]):
+        idx = 0
+        for i in range(self.Nx):
+            for j in range(self.Ny-1):
                 v_pointer[i, j] = idx
                 idx += 1
 
@@ -142,9 +110,9 @@ class StaggeredGrid:
         pressure field to the 1D index of the pressure field.
         '''
         idx = 0
-        pressure_pointer = np.zeros(self.pressure.shape)
-        for i in range(self.pressure.shape[0]):
-            for j in range(self.pressure.shape[1]):
+        pressure_pointer = np.zeros((self.Nx, self.Ny))
+        for i in range(self.Nx):
+            for j in range(self.Ny):
                 if i == 0 and j == 0:
                     # Pinned pressure value at the bottom left corner.
                     # We set it to NaN, so that we'll not use it in the computation by mistake.
@@ -153,6 +121,19 @@ class StaggeredGrid:
                     pressure_pointer[i, j] = idx
                     idx += 1
         return pressure_pointer.astype(int)
+
+    def pointer_vorticity(self):
+        '''
+        Generate a map that maps the 2D index of the 
+        vorticity field to the 1D index of the vorticity field.
+        '''
+        idx = 0
+        vorticity_pointer = np.zeros((self.Nx-1, self.Ny-1))
+        for i in range(self.Nx-1):
+            for j in range(self.Ny-1):
+                vorticity_pointer[i, j] = idx
+                idx += 1
+        return vorticity_pointer.astype(int)
 
 
     ###################################################
@@ -167,6 +148,13 @@ class StaggeredGrid:
         # don't need to solve it.
         return self.pressure.reshape(-1)[1:]
     
+    def vorticity_2D_to_1D(self):
+        '''
+        After changing the 2D representation of the vorticity field,
+        we need to update the 1D representation of the vorticity field.
+        '''
+        return self.vorticity.reshape(-1)
+    
     def velocity_2D_to_1D(self):
         '''
         After changing the 2D representation of the pressure field,
@@ -174,7 +162,7 @@ class StaggeredGrid:
         '''
         # The boundary velocities are specified, so that we
         # don't need to solve them.
-        return np.concatenate((self.u.reshape(-1), self.v.reshape(-1)))
+        return self.u.reshape(-1), self.v.reshape(-1)
     
     def pressure_1D_to_2D(self):
         '''
@@ -183,6 +171,13 @@ class StaggeredGrid:
         '''
         pressure = np.insert(self.pressure_vector, 0, 0)
         return pressure.reshape(self.Nx, self.Ny)
+
+    def vorticity_1D_to_2D(self):
+        '''
+        After changing the 1D representation of the vorticity field,
+        we need to update the 2D representation of the vorticity field.
+        '''
+        return self.vorticity_vector.reshape(self.Nx-1, self.Ny-1)
     
     def velocity_1D_to_2D(self):
         '''
